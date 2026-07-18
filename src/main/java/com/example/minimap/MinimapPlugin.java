@@ -59,7 +59,7 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         UUID id = player.getUniqueId();
 
         MapView view = Bukkit.createMap(player.getWorld());
-        view.setScale(MapView.Scale.FARTHEST);
+        view.setScale(MapView.Scale.FAR);
         view.setTrackingPosition(false);
 
         // Bigger crosshair arrow at center (64,64)
@@ -100,10 +100,10 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
                 for (Player other : player.getWorld().getPlayers()) {
                     if (other.getUniqueId().equals(player.getUniqueId())) continue;
                     Location oloc = other.getLocation();
-                    int px = 64 + (oloc.getBlockX() - midX) / 16;
-                    int pz = 64 + (oloc.getBlockZ() - midZ) / 16;
+                    int px = 64 + (oloc.getBlockX() - midX) / 8;
+                    int pz = 64 + (oloc.getBlockZ() - midZ) / 8;
                     if (px < 0 || px >= 128 || pz < 0 || pz >= 128) continue;
-                    // 2x2 dot so it's visible at FARTHEST scale
+                    // 2x2 dot so it's visible at FAR scale
                     byte color = other.isSneaking() ? red : yellow;
                     canvas.setPixel(px,     pz,     color);
                     if (px + 1 < 128) canvas.setPixel(px + 1, pz,     color);
