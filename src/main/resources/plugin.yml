@@ -1,0 +1,8 @@
+name: MinimapPlugin
+version: 1.0
+main: com.example.minimap.MinimapPlugin
+api-version: "1.21"
+commands:
+  minimap:
+    description: Toggle the minimap on/off
+    usage: /minimap
