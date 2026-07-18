@@ -96,13 +96,30 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
 
     private void removeMinimap(Player player) {
         UUID id = player.getUniqueId();
+        MapView view = playerMaps.get(id);
         activePlayers.remove(id);
         playerMaps.remove(id);
 
-        ItemStack offhand = player.getInventory().getItemInOffHand();
-        if (offhand != null && offhand.getType() == Material.FILLED_MAP) {
-            player.getInventory().setItemInOffHand(null);
+        if (view == null) return;
+        int targetId = view.getId();
+
+        // Scan the ENTIRE inventory (main, armor, off-hand) and remove the
+        // specific map we created. The player may have moved it out of the
+        // off-hand into their backpack before closing, so we can't just
+        // clear the off-hand slot.
+        PlayerInventory inv = player.getInventory();
+        ItemStack[] contents = inv.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            if (isOurMap(contents[i], targetId)) {
+                inv.setItem(i, null);
+            }
         }
+    }
+
+    private boolean isOurMap(ItemStack item, int targetId) {
+        if (item == null || item.getType() != Material.FILLED_MAP) return false;
+        if (!(item.getItemMeta() instanceof MapMeta meta)) return false;
+        return meta.getMapId() == targetId;
     }
 
     private void updateAllMaps() {
