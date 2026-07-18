@@ -28,7 +28,7 @@ import java.util.*;
  */
 public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
-    private static final int BPP = 8;          // blocks per pixel（等级3 / FAR：每像素 8 格，覆盖 1024x1024）
+    private static final int BPP = 4;          // blocks per pixel（等级2 / NORMAL：每像素 4 格，覆盖 512x512）
     private static final int SIZE = 128;        // 地图边长（像素）
     private static final int CTR = 64;          // 中心像素
 
@@ -93,7 +93,7 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         UUID id = player.getUniqueId();
 
         MapView view = Bukkit.createMap(player.getWorld());
-        view.setScale(MapView.Scale.FAR);     // 仅装饰用，真正的比例尺由我们自己按 BPP 换算
+        view.setScale(MapView.Scale.NORMAL);  // 仅装饰用，真正的比例尺由我们自己按 BPP 换算
         view.setTrackingPosition(false);
         view.setUnlimitedTracking(false);
         try { view.setLocked(false); } catch (Throwable ignored) {}
@@ -310,28 +310,16 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         for (int dx = -1; dx <= 1; dx++)
             for (int dy = -1; dy <= 1; dy++)
                 canvas.setPixel(cx + dx, cy + dy, C_WHITE);
-        // 绿色四臂（半径 2~4）
-        for (int d = 2; d <= 4; d++) {
-            canvas.setPixel(cx - d, cy, C_GREEN);
-            canvas.setPixel(cx + d, cy, C_GREEN);
-            canvas.setPixel(cx, cy - d, C_GREEN);
-            canvas.setPixel(cx, cy + d, C_GREEN);
-        }
-        // 黑色尖端（半径 5）
-        canvas.setPixel(cx - 5, cy, C_BLACK);
-        canvas.setPixel(cx + 5, cy, C_BLACK);
-        canvas.setPixel(cx, cy - 5, C_BLACK);
-        canvas.setPixel(cx, cy + 5, C_BLACK);
 
-        // 朝向箭头：沿视线方向再伸出一段（yaw:0=+Z 南, 90=-X 西）
+        // 朝向箭头：沿视线方向伸出（短箭头，yaw:0=+Z 南, 90=-X 西）
         double yr = Math.toRadians(yaw);
         double fx = -Math.sin(yr);   // 世界 +X = 屏幕右
         double fz = Math.cos(yr);    // 世界 +Z = 屏幕下
-        for (int d = 2; d <= 10; d++) {
+        for (int d = 2; d <= 6; d++) {
             int ax = cx + (int) Math.round(fx * d);
             int ay = cy + (int) Math.round(fz * d);
             if (ax < 0 || ax >= SIZE || ay < 0 || ay >= SIZE) break;
-            canvas.setPixel(ax, ay, d >= 9 ? C_BLACK : C_GREEN);
+            canvas.setPixel(ax, ay, d >= 5 ? C_BLACK : C_GREEN);
         }
     }
 
