@@ -372,28 +372,19 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         }
     }
 
-    /** 在点 (px,pz) 上方画玩家名字：同色底板 + 黑边 + 黑字（3x5 微型字体，比默认小很多）。 */
-    private void drawLabel(MapCanvas canvas, int px, int pz, String name, byte plateColor) {
+    /** 在点 (px,pz) 上方画玩家名字：无底板，仅 1px 黑阴影 + 玩家色 3x5 文字（不画大黑块）。 */
+    private void drawLabel(MapCanvas canvas, int px, int pz, String name, byte col) {
         String t = name.toUpperCase();
         int tw = t.length() * 4 - 1;          // 每字 3 宽 + 1 间距
-        int th = 5;
         int tx = px - tw / 2;
-        int ty = pz - 3 - th - 1;             // 默认放点的上方
+        int ty = pz - 3 - 5 - 1;              // 默认放点的上方
         if (ty < 0) ty = pz + 3;              // 上方放不下就放下方
         if (tx < 0) tx = 0;
         if (tx + tw > SIZE) tx = SIZE - tw;
 
-        // 底板（玩家色）+ 黑边
-        for (int i = -1; i <= tw; i++) {
-            for (int j = -1; j <= th; j++) {
-                int bx = tx + i, by = ty + j;
-                if (bx < 0 || bx >= SIZE || by < 0 || by >= SIZE) continue;
-                boolean border = (i == -1 || i == tw || j == -1 || j == th);
-                canvas.setPixel(bx, by, border ? C_BLACK : plateColor);
-            }
-        }
-        // 黑字画在亮底板上，清晰可读
-        drawMiniText(canvas, tx, ty, t, C_BLACK);
+        // 1px 黑色阴影（仅偏移处描边），再叠玩家色文字 → 任意地形可读，且无大黑块
+        drawMiniText(canvas, tx + 1, ty + 1, t, C_BLACK);
+        drawMiniText(canvas, tx, ty, t, col);
     }
 
     /** 用 3x5 微型字体在 (x,y) 画文字，字色可指定。返回绘制宽度（像素）。 */
