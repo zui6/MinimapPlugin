@@ -298,6 +298,9 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
             for (int dx = -1; dx <= 1; dx++)
                 for (int dz = -1; dz <= 1; dz++)
                     canvas.setPixel(px + dx, pz + dz, col);
+
+            // 玩家名字标签（点上方，垫同色底板 + 黑边，深棕字清晰可读）
+            drawLabel(canvas, px, pz, other.getName(), col);
         }
 
         // 3) 中心准星 + 朝向箭头
@@ -321,6 +324,31 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
             if (ax < 0 || ax >= SIZE || ay < 0 || ay >= SIZE) break;
             canvas.setPixel(ax, ay, d >= 5 ? C_BLACK : C_GREEN);
         }
+    }
+
+    /** 在点 (px,pz) 上方画玩家名字：同色底板 + 黑边 + 深棕字（Bukkit drawText 字体色固定，借底板提对比度）。 */
+    private void drawLabel(MapCanvas canvas, int px, int pz, String name, byte plateColor) {
+        MapFont font = MinecraftFont.Font;
+        int w = font.getWidth(name);
+        if (w <= 0) return;
+        int h = font.getHeight() + 1;                 // 7px 字 + 1 行间距
+        int tx = px - w / 2;
+        int ty = pz - 3 - h;                          // 默认放点的上方
+        if (ty < 0) ty = pz + 3;                      // 上方放不下就放下方
+        if (tx < 0) tx = 0;
+        if (tx + w > SIZE) tx = SIZE - w;
+
+        // 底板（玩家色）+ 黑边
+        for (int i = -1; i <= w; i++) {
+            for (int j = -1; j <= h; j++) {
+                int bx = tx + i, by = ty + j;
+                if (bx < 0 || bx >= SIZE || by < 0 || by >= SIZE) continue;
+                boolean border = (i == -1 || i == w || j == -1 || j == h);
+                canvas.setPixel(bx, by, border ? C_BLACK : plateColor);
+            }
+        }
+        // 默认字体色为深棕，画在亮底板上清晰可读
+        canvas.drawText(tx, ty, font, name);
     }
 
     // ---------------------------------------------------------------- 工具
