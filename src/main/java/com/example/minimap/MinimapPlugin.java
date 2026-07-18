@@ -59,10 +59,10 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         UUID id = player.getUniqueId();
 
         MapView view = Bukkit.createMap(player.getWorld());
-        view.setScale(MapView.Scale.CLOSEST);
+        view.setScale(MapView.Scale.FARTHEST);
         view.setTrackingPosition(false);
 
-        // Green crosshair cursor at center (64,64)
+        // Bigger crosshair arrow at center (64,64)
         view.addRenderer(new MapRenderer(false) {
             @Override
             public void render(MapView mapView, MapCanvas canvas, Player p) {
@@ -70,15 +70,46 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
                 byte white  = MapPalette.matchColor(255, 255, 255);
                 byte black  = MapPalette.matchColor(0, 0, 0);
                 int cx = 64, cy = 64;
-                canvas.setPixel(cx,   cy,   white);
-                canvas.setPixel(cx-1, cy,   green);
-                canvas.setPixel(cx+1, cy,   green);
-                canvas.setPixel(cx,   cy-1, green);
-                canvas.setPixel(cx,   cy+1, green);
-                canvas.setPixel(cx-2, cy,   black);
-                canvas.setPixel(cx+2, cy,   black);
-                canvas.setPixel(cx,   cy-2, black);
-                canvas.setPixel(cx,   cy+2, black);
+                // White center block (3x3)
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                        canvas.setPixel(cx + dx, cy + dy, white);
+                // Green arms (radius 2–4)
+                for (int d = 2; d <= 4; d++) {
+                    canvas.setPixel(cx - d, cy, green);
+                    canvas.setPixel(cx + d, cy, green);
+                    canvas.setPixel(cx, cy - d, green);
+                    canvas.setPixel(cx, cy + d, green);
+                }
+                // Black tips at radius 5
+                canvas.setPixel(cx - 5, cy, black);
+                canvas.setPixel(cx + 5, cy, black);
+                canvas.setPixel(cx, cy - 5, black);
+                canvas.setPixel(cx, cy + 5, black);
+            }
+        });
+
+        // Player dots — show where other players are (contextual, re-drawn each frame)
+        view.addRenderer(new MapRenderer(true) {
+            @Override
+            public void render(MapView mapView, MapCanvas canvas, Player player) {
+                byte yellow  = MapPalette.matchColor(255, 255, 85);
+                byte red     = MapPalette.matchColor(255, 85, 85);
+                int midX = mapView.getCenterX();
+                int midZ = mapView.getCenterZ();
+                for (Player other : player.getWorld().getPlayers()) {
+                    if (other.getUniqueId().equals(player.getUniqueId())) continue;
+                    Location oloc = other.getLocation();
+                    int px = 64 + (oloc.getBlockX() - midX) / 16;
+                    int pz = 64 + (oloc.getBlockZ() - midZ) / 16;
+                    if (px < 0 || px >= 128 || pz < 0 || pz >= 128) continue;
+                    // 2x2 dot so it's visible at FARTHEST scale
+                    byte color = other.isSneaking() ? red : yellow;
+                    canvas.setPixel(px,     pz,     color);
+                    if (px + 1 < 128) canvas.setPixel(px + 1, pz,     color);
+                    if (pz + 1 < 128) canvas.setPixel(px,     pz + 1, color);
+                    if (px + 1 < 128 && pz + 1 < 128) canvas.setPixel(px + 1, pz + 1, color);
+                }
             }
         });
 
