@@ -47,6 +47,52 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
     private static final byte C_YELLOW = MapPalette.matchColor(new Color(255, 235, 60));
     private static final byte C_RED    = MapPalette.matchColor(new Color(240, 60, 60));
 
+    // 3x5 微型字体（地图名字标签用，比默认 5x7 小很多；颜色可自由指定）
+    private static final Map<Character, String[]> FONT3 = new HashMap<>();
+    static {
+        String[][] g = {
+            {"A", ".#.", "#.#", "###", "#.#", "#.#"},
+            {"B", "##.", "#.#", "##.", "#.#", "##."},
+            {"C", "###", "#..", "#..", "#..", "###"},
+            {"D", "##.", "#.#", "#.#", "#.#", "##."},
+            {"E", "###", "#..", "###", "#..", "###"},
+            {"F", "###", "#..", "###", "#..", "#.."},
+            {"G", "###", "#..", "#.#", "#.#", "###"},
+            {"H", "#.#", "#.#", "###", "#.#", "#.#"},
+            {"I", "###", ".#.", ".#.", ".#.", "###"},
+            {"J", "..#", "..#", "..#", "#.#", "###"},
+            {"K", "#.#", "#.#", "##.", "#.#", "#.#"},
+            {"L", "#..", "#..", "#..", "#..", "###"},
+            {"M", "#.#", "###", "###", "#.#", "#.#"},
+            {"N", "#.#", "##.", "###", ".##", "#.#"},
+            {"O", "###", "#.#", "#.#", "#.#", "###"},
+            {"P", "###", "#.#", "##.", "#..", "#.."},
+            {"Q", "###", "#.#", "#.#", "#.#", "..#"},
+            {"R", "###", "#.#", "##.", "#.#", "#.#"},
+            {"S", "###", "#..", "###", "..#", "###"},
+            {"T", "###", ".#.", ".#.", ".#.", ".#."},
+            {"U", "#.#", "#.#", "#.#", "#.#", "###"},
+            {"V", "#.#", "#.#", "#.#", ".#.", ".#."},
+            {"W", "#.#", "#.#", "###", "###", "#.#"},
+            {"X", "#.#", "#.#", ".#.", "#.#", "#.#"},
+            {"Y", "#.#", "#.#", ".#.", ".#.", ".#."},
+            {"Z", "###", "..#", ".#.", "#..", "###"},
+            {"0", "###", "#.#", "#.#", "#.#", "###"},
+            {"1", ".#.", "##.", ".#.", ".#.", "###"},
+            {"2", "###", "..#", "###", "#..", "###"},
+            {"3", "###", "..#", "###", "..#", "###"},
+            {"4", "#.#", "#.#", "###", "..#", "..#"},
+            {"5", "###", "#..", "###", "..#", "###"},
+            {"6", "###", "#..", "###", "#.#", "###"},
+            {"7", "###", "..#", "..#", "..#", "..#"},
+            {"8", "###", "#.#", "###", "#.#", "###"},
+            {"9", "###", "#.#", "###", "..#", "###"},
+            {" ", "...", "...", "...", "...", "..."},
+            {"_", "...", "...", "...", "...", "###"},
+        };
+        for (String[] e : g) FONT3.put(e[0].charAt(0), new String[]{e[1], e[2], e[3], e[4], e[5]});
+    }
+
     @Override
     public void onEnable() {
         getCommand("minimap").setExecutor(this);
@@ -326,29 +372,50 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
         }
     }
 
-    /** 在点 (px,pz) 上方画玩家名字：同色底板 + 黑边 + 深棕字（Bukkit drawText 字体色固定，借底板提对比度）。 */
+    /** 在点 (px,pz) 上方画玩家名字：同色底板 + 黑边 + 黑字（3x5 微型字体，比默认小很多）。 */
     private void drawLabel(MapCanvas canvas, int px, int pz, String name, byte plateColor) {
-        MapFont font = MinecraftFont.Font;
-        int w = font.getWidth(name);
-        if (w <= 0) return;
-        int h = font.getHeight() + 1;                 // 7px 字 + 1 行间距
-        int tx = px - w / 2;
-        int ty = pz - 3 - h;                          // 默认放点的上方
-        if (ty < 0) ty = pz + 3;                      // 上方放不下就放下方
+        String t = name.toUpperCase();
+        int tw = t.length() * 4 - 1;          // 每字 3 宽 + 1 间距
+        int th = 5;
+        int tx = px - tw / 2;
+        int ty = pz - 3 - th - 1;             // 默认放点的上方
+        if (ty < 0) ty = pz + 3;              // 上方放不下就放下方
         if (tx < 0) tx = 0;
-        if (tx + w > SIZE) tx = SIZE - w;
+        if (tx + tw > SIZE) tx = SIZE - tw;
 
         // 底板（玩家色）+ 黑边
-        for (int i = -1; i <= w; i++) {
-            for (int j = -1; j <= h; j++) {
+        for (int i = -1; i <= tw; i++) {
+            for (int j = -1; j <= th; j++) {
                 int bx = tx + i, by = ty + j;
                 if (bx < 0 || bx >= SIZE || by < 0 || by >= SIZE) continue;
-                boolean border = (i == -1 || i == w || j == -1 || j == h);
+                boolean border = (i == -1 || i == tw || j == -1 || j == th);
                 canvas.setPixel(bx, by, border ? C_BLACK : plateColor);
             }
         }
-        // 默认字体色为深棕，画在亮底板上清晰可读
-        canvas.drawText(tx, ty, font, name);
+        // 黑字画在亮底板上，清晰可读
+        drawMiniText(canvas, tx, ty, t, C_BLACK);
+    }
+
+    /** 用 3x5 微型字体在 (x,y) 画文字，字色可指定。返回绘制宽度（像素）。 */
+    private int drawMiniText(MapCanvas canvas, int x, int y, String text, byte color) {
+        int cx = x;
+        for (char raw : text.toCharArray()) {
+            char ch = Character.toUpperCase(raw);
+            String[] g = FONT3.get(ch);
+            if (g == null) g = FONT3.get(' ');
+            for (int r = 0; r < 5; r++) {
+                String row = g[r];
+                for (int c = 0; c < 3; c++) {
+                    if (row.charAt(c) == '#') {
+                        int px = cx + c, py = y + r;
+                        if (px >= 0 && px < SIZE && py >= 0 && py < SIZE)
+                            canvas.setPixel(px, py, color);
+                    }
+                }
+            }
+            cx += 4;   // 3 宽 + 1 间距
+        }
+        return cx - x;
     }
 
     // ---------------------------------------------------------------- 工具
