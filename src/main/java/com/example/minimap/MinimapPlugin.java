@@ -89,21 +89,28 @@ public class MinimapPlugin extends JavaPlugin implements CommandExecutor, Listen
             }
         });
 
-        // Player dots — show where other players are (contextual, re-drawn each frame)
-        view.addRenderer(new MapRenderer(true) {
+        // Player dots — redrawn fresh every map update (no trails)
+        view.addRenderer(new MapRenderer(false) {
             @Override
             public void render(MapView mapView, MapCanvas canvas, Player player) {
                 byte yellow  = MapPalette.matchColor(255, 255, 85);
                 byte red     = MapPalette.matchColor(255, 85, 85);
                 int midX = mapView.getCenterX();
                 int midZ = mapView.getCenterZ();
-                for (Player other : player.getWorld().getPlayers()) {
-                    if (other.getUniqueId().equals(player.getUniqueId())) continue;
+                World world = mapView.getWorld();
+                if (world == null) return;
+                // Find owner so we skip them (they are the crosshair)
+                UUID owner = null;
+                for (UUID uid : activePlayers) {
+                    MapView v = playerMaps.get(uid);
+                    if (v != null && v.getId() == mapView.getId()) { owner = uid; break; }
+                }
+                for (Player other : world.getPlayers()) {
+                    if (owner != null && other.getUniqueId().equals(owner)) continue;
                     Location oloc = other.getLocation();
                     int px = 64 + (oloc.getBlockX() - midX) / 8;
                     int pz = 64 + (oloc.getBlockZ() - midZ) / 8;
                     if (px < 0 || px >= 128 || pz < 0 || pz >= 128) continue;
-                    // 2x2 dot so it's visible at FAR scale
                     byte color = other.isSneaking() ? red : yellow;
                     canvas.setPixel(px,     pz,     color);
                     if (px + 1 < 128) canvas.setPixel(px + 1, pz,     color);
